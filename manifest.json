@@ -1,5 +1,5 @@
 {
-  "name": "figma-wehcat-miniprogram",
+  "name": "微信小程序 WXSS",
   "id": "1620454631553391223",
   "api": "1.0.0",
   "main": "code.js",
@@ -9,13 +9,27 @@
   "enableProposedApi": false,
   "documentAccess": "dynamic-page",
   "editorType": [
+    "figma",
     "dev"
   ],
   "ui": "ui.html",
+  "menu": [
+    {
+      "name": "设置转换倍率",
+      "command": "show-settings"
+    },
+    {
+      "separator": true
+    },
+    {
+      "name": "关于",
+      "command": "about"
+    }
+  ],
   "codegenLanguages": [
     {
-      "label": "Language Label",
-      "value": "language-value"
+      "label": "微信小程序样式 (WXSS)",
+      "value": "CSS"
     }
   ],
   "networkAccess": {

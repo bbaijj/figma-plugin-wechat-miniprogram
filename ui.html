@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>微信小程序单位转换设置</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      padding: 20px;
+      color: #333;
+      background-color: #f9f9f9;
+    }
+
+    .container {
+      max-width: 450px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 18px;
+      margin-bottom: 24px;
+      color: #222;
+      text-align: center;
+    }
+
+    .conversion-formula {
+      background-color: white;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .formula-title {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 16px;
+      color: #555;
+    }
+
+    .formula-display {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      gap: 12px;
+    }
+
+    .unit-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+      min-width: 100px;
+      border-radius: 6px;
+      background-color: #f8f9fa;
+    }
+
+    .unit-label {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    .unit-value {
+      font-size: 16px;
+      font-weight: 600;
+      color: #222;
+    }
+
+    .figma-unit {
+      border: 2px solid #18A0FB;
+    }
+
+    .wechat-unit {
+      border: 2px solid #07C160;
+    }
+
+    .arrow {
+      font-size: 24px;
+      color: #666;
+      font-weight: 300;
+    }
+
+    .rate-control {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .rate-label {
+      font-size: 14px;
+      color: #555;
+    }
+
+    .rate-input-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    input[type="number"] {
+      width: 80px;
+      padding: 8px 12px;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+
+    input[type="number"]:focus {
+      outline: none;
+      border-color: #18A0FB;
+    }
+
+    .rate-unit {
+      font-size: 14px;
+      color: #666;
+    }
+
+    .slider-container {
+      margin: 20px 0;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: #e0e0e0;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #18A0FB;
+      cursor: pointer;
+      border: 2px solid white;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    .examples {
+      background-color: #f8f9fa;
+      border-radius: 6px;
+      padding: 16px;
+      margin-top: 20px;
+      border-left: 4px solid #18A0FB;
+    }
+
+    .examples-title {
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #555;
+    }
+
+    .example-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      padding: 4px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .example-item:last-child {
+      border-bottom: none;
+    }
+
+    .example-figma {
+      color: #18A0FB;
+      font-weight: 500;
+    }
+
+    .example-wechat {
+      color: #07C160;
+      font-weight: 500;
+    }
+
+    .help-text {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #888;
+      line-height: 1.5;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    button {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .save-btn {
+      background-color: #18A0FB;
+      color: white;
+    }
+
+    .save-btn:hover {
+      background-color: #0D8BD9;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .reset-btn {
+      background-color: #f5f5f5;
+      color: #333;
+      border: 1px solid #ddd;
+    }
+
+    .reset-btn:hover {
+      background-color: #e5e5e5;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .status-message {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      display: none;
+      text-align: center;
+    }
+
+    .success {
+      background-color: #E7F7E9;
+      color: #0A7B0A;
+      display: block;
+      border: 1px solid #C8E6C9;
+    }
+
+    .error {
+      background-color: #FDE7E7;
+      color: #D00;
+      display: block;
+      border: 1px solid #FFCDD2;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>微信小程序单位转换设置</h1>
+
+    <div class="conversion-formula">
+      <div class="formula-title">转换公式</div>
+
+      <div class="formula-display">
+        <div class="unit-box figma-unit">
+          <div class="unit-label">Figma 像素</div>
+          <div class="unit-value">1<span id="figmaUnit">px</span></div>
+        </div>
+
+        <div class="arrow">=</div>
+
+        <div class="unit-box wechat-unit">
+          <div class="unit-label">微信小程序</div>
+          <div class="unit-value" id="wechatValue"><span id="wechatNumber">2</span><span id="wechatUnit">rpx</span></div>
+        </div>
+      </div>
+
+      <div class="rate-control">
+        <div class="rate-label">转换倍率</div>
+        <div class="rate-input-container">
+          <input type="number" id="conversionRate" min="0.1" max="10" step="0.1" value="2">
+          <div class="rate-unit">倍</div>
+        </div>
+      </div>
+
+      <div class="slider-container">
+        <input type="range" id="rateSlider" min="0.1" max="10" step="0.1" value="2">
+      </div>
+
+      <div class="examples">
+        <div class="examples-title">示例值</div>
+        <div class="example-item">
+          <span class="example-figma">50px</span>
+          <span>→</span>
+          <span class="example-wechat" id="example1">100rpx</span>
+        </div>
+        <div class="example-item">
+          <span class="example-figma">100px</span>
+          <span>→</span>
+          <span class="example-wechat" id="example2">200rpx</span>
+        </div>
+        <div class="example-item">
+          <span class="example-figma">200px</span>
+          <span>→</span>
+          <span class="example-wechat" id="example3">400rpx</span>
+        </div>
+      </div>
+
+      <div class="help-text">
+        调整倍率以控制 Figma 像素到微信小程序 rpx 的转换比例。通常 1px = 2rpx，但您可以根据设计需求调整。
+        rpx 是微信小程序的响应式像素单位，可以根据不同屏幕宽度自适应缩放。
+      </div>
+    </div>
+
+    <div class="button-group">
+      <button class="save-btn" id="saveBtn">保存设置</button>
+      <button class="reset-btn" id="resetBtn">恢复默认</button>
+    </div>
+
+    <div id="statusMessage" class="status-message"></div>
+  </div>
+
+  <script>
+    // 获取DOM元素
+    const conversionRateInput = document.getElementById('conversionRate');
+    const rateSlider = document.getElementById('rateSlider');
+    const wechatNumber = document.getElementById('wechatNumber');
+    const example1 = document.getElementById('example1');
+    const example2 = document.getElementById('example2');
+    const example3 = document.getElementById('example3');
+    const saveBtn = document.getElementById('saveBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const statusMessage = document.getElementById('statusMessage');
+
+    // 默认转换倍率
+    const DEFAULT_RATE = 2;
+
+    // 更新所有显示
+    function updateAllDisplays() {
+      const rate = parseFloat(conversionRateInput.value);
+
+      // 更新滑块值（保持同步）
+      rateSlider.value = rate;
+
+      // 更新微信小程序显示值（1px = Xrpx）
+      wechatNumber.textContent = rate;
+
+      // 更新示例值
+      example1.textContent = Math.round(50 * rate) + 'rpx';
+      example2.textContent = Math.round(100 * rate) + 'rpx';
+      example3.textContent = Math.round(200 * rate) + 'rpx';
+    }
+
+    // 保存设置
+    function saveSettings() {
+      const rate = parseFloat(conversionRateInput.value);
+
+      if (isNaN(rate) || rate <= 0) {
+        showMessage('请输入有效的转换倍率（大于0）', 'error');
+        return;
+      }
+
+      // 发送设置到插件
+      parent.postMessage({
+        pluginMessage: {
+          type: 'saveSettings',
+          conversionRate: rate
+        }
+      }, '*');
+
+      showMessage('设置已保存', 'success');
+    }
+
+    // 恢复默认设置
+    function resetSettings() {
+      conversionRateInput.value = DEFAULT_RATE;
+      updateAllDisplays();
+
+      // 发送默认设置到插件
+      parent.postMessage({
+        pluginMessage: {
+          type: 'saveSettings',
+          conversionRate: DEFAULT_RATE
+        }
+      }, '*');
+
+      showMessage('已恢复默认设置', 'success');
+    }
+
+    // 显示消息
+    function showMessage(message, type) {
+      statusMessage.textContent = message;
+      statusMessage.className = 'status-message ' + type;
+      setTimeout(() => {
+        statusMessage.style.display = 'none';
+      }, 3000);
+    }
+
+    // 加载保存的设置
+    function loadSavedSettings() {
+      // 请求插件加载保存的设置
+      parent.postMessage({
+        pluginMessage: {
+          type: 'loadSettings'
+        }
+      }, '*');
+    }
+
+    // 监听来自插件的消息
+    window.addEventListener('message', (event) => {
+      const pluginMessage = event.data.pluginMessage;
+
+      if (pluginMessage && pluginMessage.type === 'settingsLoaded') {
+        const rate = pluginMessage.conversionRate || DEFAULT_RATE;
+        conversionRateInput.value = rate;
+        updateAllDisplays();
+      }
+    });
+
+    // 事件监听 - 输入框变化
+    conversionRateInput.addEventListener('input', () => {
+      updateAllDisplays();
+    });
+
+    // 事件监听 - 滑块变化
+    rateSlider.addEventListener('input', () => {
+      conversionRateInput.value = rateSlider.value;
+      updateAllDisplays();
+    });
+
+    // 事件监听 - 按钮点击
+    saveBtn.addEventListener('click', saveSettings);
+    resetBtn.addEventListener('click', resetSettings);
+
+    // 初始化
+    updateAllDisplays();
+
+    // 页面加载时加载设置
+    window.onload = function() {
+      loadSavedSettings();
+    };
+  </script>
+</body>
+</html>
