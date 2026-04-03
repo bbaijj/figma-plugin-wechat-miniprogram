@@ -6,9 +6,156 @@
 // You can access browser APIs in the <script> tag inside "ui.html" which has a
 // full browser environment (See https://www.figma.com/plugin-docs/how-plugins-run).
 
+// 调试模式标志
+const DEBUG_MODE = true;
+
 // 单位转换函数：将px转换为rpx
 function pxToRpx(value: number, conversionRate: number): number {
   return value * conversionRate;
+}
+
+// 将Figma样式名转换为英文变量名
+function figmaStyleNameToEnglishVariable(styleName: string): string {
+  if (DEBUG_MODE) {
+    console.log(`开始转换样式名: "${styleName}"`);
+  }
+
+  let name = styleName.trim();
+
+  if (DEBUG_MODE) {
+    console.log(`初始名称: "${name}"`);
+  }
+
+  // 将层级分隔符'/'转换为'-'
+  name = name.replace(/\//g, '-');
+
+  // 将非字母数字字符转换为连字符
+  name = name.replace(/[^a-zA-Z0-9-]/g, '-');
+
+  // 移除多余的连字符
+  name = name.replace(/-+/g, '-');
+  name = name.replace(/^-|-$/g, '');
+
+  // 转换为小写
+  name = name.toLowerCase();
+
+  if (DEBUG_MODE) {
+    console.log(`最终变量名: "${name}"`);
+  }
+
+  return name;
+}
+
+// 根据间距值获取CSS变量名
+function getSpacingVariableName(value: number): string {
+  // 常见间距值映射
+  const spacingValueToName: Record<number, string> = {
+    4: 'xs',
+    6: 'middle',
+    8: 'sm',
+    12: 'md',
+    16: 'lg',
+    24: 'xl',
+    32: 'xxl',
+    48: 'xxxl',
+    64: 'xxxxl'
+  };
+
+  // 四舍五入到整数
+  const roundedValue = Math.round(value);
+  const absoluteValue = Math.abs(roundedValue);
+  const isNegative = roundedValue < 0;
+
+  // 如果值在映射中，使用映射的名称
+  let namePart: string;
+  if (spacingValueToName[absoluteValue]) {
+    namePart = spacingValueToName[absoluteValue];
+  } else {
+    // 否则使用数值作为变量名
+    namePart = absoluteValue.toString();
+  }
+
+  // 添加负号前缀
+  if (isNegative) {
+    namePart = 'negative-' + namePart;
+  }
+
+  return `spacing-${namePart}`;
+}
+
+// 根据样式ID获取样式名
+// 根据样式ID获取样式名
+function getStyleName(styleId: string): string | null {
+  try {
+    const style = figma.getStyleById(styleId);
+    if (style) {
+      if (DEBUG_MODE) {
+        console.log(`获取样式成功: "${style.name}" (ID: ${styleId})`);
+      }
+      return style.name;
+    } else {
+      if (DEBUG_MODE) {
+        console.log(`样式ID "${styleId}" 不存在`);
+      }
+    }
+  } catch (error) {
+    if (DEBUG_MODE) {
+      console.error('获取样式名失败:', error, '样式ID:', styleId);
+    }
+  }
+  return null;
+}
+
+// 生成带有样式变量的颜色值
+function generateColorWithStyleVariable(color: { r: number; g: number; b: number; a?: number }, styleId?: string): string {
+  const colorString = colorToCss(color);
+
+  if (styleId) {
+    const styleName = getStyleName(styleId);
+    if (styleName) {
+      const variableName = figmaStyleNameToEnglishVariable(styleName);
+      if (variableName) {
+        if (DEBUG_MODE) {
+          console.log(`样式转换: "${styleName}" -> "${variableName}"`);
+          console.log(`生成: var(${variableName}, ${colorString})`);
+        }
+        return `var(${variableName}, ${colorString})`;
+      } else if (DEBUG_MODE) {
+        console.log(`样式名转换失败: "${styleName}"`);
+      }
+    } else if (DEBUG_MODE) {
+      console.log(`样式ID "${styleId}" 对应的样式名未找到`);
+    }
+  } else if (DEBUG_MODE) {
+    console.log(`无样式ID，使用直接颜色值: ${colorString}`);
+  }
+
+  return colorString;
+}
+
+// 生成带有样式变量的渐变值
+function generateGradientWithStyleVariable(gradientCss: string, styleId?: string): string {
+  if (styleId) {
+    const styleName = getStyleName(styleId);
+    if (styleName) {
+      const variableName = figmaStyleNameToEnglishVariable(styleName);
+      if (variableName) {
+        if (DEBUG_MODE) {
+          console.log(`渐变样式转换: "${styleName}" -> "${variableName}"`);
+          console.log(`生成渐变: var(${variableName}, ${gradientCss})`);
+        }
+        return `var(${variableName}, ${gradientCss})`;
+      } else if (DEBUG_MODE) {
+        console.log(`渐变样式名转换失败: "${styleName}"`);
+      }
+    } else if (DEBUG_MODE) {
+      console.log(`渐变样式ID "${styleId}" 对应的样式名未找到`);
+    }
+  } else if (DEBUG_MODE) {
+    console.log(`无渐变样式ID，使用直接渐变值: ${gradientCss}`);
+  }
+
+  return gradientCss;
 }
 
 
@@ -18,6 +165,17 @@ function generateWechatMiniProgramCode(node: SceneNode, conversionRate: number):
 
   // 检查是否是文本节点
   const isTextNode = 'characters' in node && typeof (node as any).characters === 'string';
+
+  // 获取所有样式ID
+  const fillStyleId = (node as any).fillStyleId;
+  const strokeStyleId = (node as any).strokeStyleId;
+  const textStyleId = isTextNode ? (node as any).textStyleId : null;
+  const effectStyleId = (node as any).effectStyleId;
+  const gridStyleId = (node as any).gridStyleId;
+
+  if (DEBUG_MODE) {
+    console.log('样式ID:', { fillStyleId, strokeStyleId, textStyleId, effectStyleId, gridStyleId });
+  }
 
   // 检查父节点是否有可见填充色（用于容器背景）
   let parentBackgroundColor = '';
@@ -89,8 +247,10 @@ function generateWechatMiniProgramCode(node: SceneNode, conversionRate: number):
 
       // gap (item spacing)
       if ('itemSpacing' in node && typeof (node as any).itemSpacing === 'number' && (node as any).itemSpacing > 0) {
-        const gapRpx = pxToRpx((node as any).itemSpacing, conversionRate);
-        styles.push(`gap: ${gapRpx}rpx`);
+        const gapPx = (node as any).itemSpacing;
+        const gapRpx = pxToRpx(gapPx, conversionRate);
+        const variableName = getSpacingVariableName(gapPx);
+        styles.push(`gap: var(${variableName}, ${gapRpx}rpx)`);
       }
     }
   }
@@ -107,20 +267,34 @@ function generateWechatMiniProgramCode(node: SceneNode, conversionRate: number):
   }
 
   if (hasMargin) {
-    const marginTop = 'marginTop' in node && typeof (node as any).marginTop === 'number' ? pxToRpx((node as any).marginTop, conversionRate) : 0;
-    const marginRight = 'marginRight' in node && typeof (node as any).marginRight === 'number' ? pxToRpx((node as any).marginRight, conversionRate) : 0;
-    const marginBottom = 'marginBottom' in node && typeof (node as any).marginBottom === 'number' ? pxToRpx((node as any).marginBottom, conversionRate) : 0;
-    const marginLeft = 'marginLeft' in node && typeof (node as any).marginLeft === 'number' ? pxToRpx((node as any).marginLeft, conversionRate) : 0;
+    // 获取原始像素值
+    const marginTopPx = 'marginTop' in node && typeof (node as any).marginTop === 'number' ? (node as any).marginTop : 0;
+    const marginRightPx = 'marginRight' in node && typeof (node as any).marginRight === 'number' ? (node as any).marginRight : 0;
+    const marginBottomPx = 'marginBottom' in node && typeof (node as any).marginBottom === 'number' ? (node as any).marginBottom : 0;
+    const marginLeftPx = 'marginLeft' in node && typeof (node as any).marginLeft === 'number' ? (node as any).marginLeft : 0;
+
+    // 转换为rpx
+    const marginTop = marginTopPx !== 0 ? pxToRpx(marginTopPx, conversionRate) : 0;
+    const marginRight = marginRightPx !== 0 ? pxToRpx(marginRightPx, conversionRate) : 0;
+    const marginBottom = marginBottomPx !== 0 ? pxToRpx(marginBottomPx, conversionRate) : 0;
+    const marginLeft = marginLeftPx !== 0 ? pxToRpx(marginLeftPx, conversionRate) : 0;
+
+    // 生成变量引用函数
+    const spacingVar = (px: number, rpx: number): string => {
+      if (px === 0) return '0';
+      const variableName = getSpacingVariableName(px);
+      return `var(${variableName}, ${rpx}rpx)`;
+    };
 
     if (marginTop === marginRight && marginTop === marginBottom && marginTop === marginLeft) {
       // 四个方向相同，使用简写
-      styles.push(`margin: ${marginTop}rpx`);
+      styles.push(`margin: ${spacingVar(marginTopPx, marginTop)}`);
     } else if (marginTop === marginBottom && marginLeft === marginRight) {
       // 上下相同，左右相同
-      styles.push(`margin: ${marginTop}rpx ${marginRight}rpx`);
+      styles.push(`margin: ${spacingVar(marginTopPx, marginTop)} ${spacingVar(marginRightPx, marginRight)}`);
     } else {
       // 四个方向都不同
-      styles.push(`margin: ${marginTop}rpx ${marginRight}rpx ${marginBottom}rpx ${marginLeft}rpx`);
+      styles.push(`margin: ${spacingVar(marginTopPx, marginTop)} ${spacingVar(marginRightPx, marginRight)} ${spacingVar(marginBottomPx, marginBottom)} ${spacingVar(marginLeftPx, marginLeft)}`);
     }
   }
 
@@ -136,26 +310,40 @@ function generateWechatMiniProgramCode(node: SceneNode, conversionRate: number):
   }
 
   if (hasPadding) {
+    // 生成变量引用函数（与margin部分相同）
+    const spacingVar = (px: number, rpx: number): string => {
+      if (px === 0) return '0';
+      const variableName = getSpacingVariableName(px);
+      return `var(${variableName}, ${rpx}rpx)`;
+    };
+
     // 处理统一的 padding
     if ('padding' in node && typeof (node as any).padding === 'number' && (node as any).padding > 0) {
-      const paddingRpx = pxToRpx((node as any).padding, conversionRate);
-      styles.push(`padding: ${paddingRpx}rpx`);
+      const paddingPx = (node as any).padding;
+      const paddingRpx = pxToRpx(paddingPx, conversionRate);
+      styles.push(`padding: ${spacingVar(paddingPx, paddingRpx)}`);
     } else {
       // 分别处理四个方向的 padding
-      const paddingTop = 'paddingTop' in node && typeof (node as any).paddingTop === 'number' ? pxToRpx((node as any).paddingTop, conversionRate) : 0;
-      const paddingRight = 'paddingRight' in node && typeof (node as any).paddingRight === 'number' ? pxToRpx((node as any).paddingRight, conversionRate) : 0;
-      const paddingBottom = 'paddingBottom' in node && typeof (node as any).paddingBottom === 'number' ? pxToRpx((node as any).paddingBottom, conversionRate) : 0;
-      const paddingLeft = 'paddingLeft' in node && typeof (node as any).paddingLeft === 'number' ? pxToRpx((node as any).paddingLeft, conversionRate) : 0;
+      const paddingTopPx = 'paddingTop' in node && typeof (node as any).paddingTop === 'number' ? (node as any).paddingTop : 0;
+      const paddingRightPx = 'paddingRight' in node && typeof (node as any).paddingRight === 'number' ? (node as any).paddingRight : 0;
+      const paddingBottomPx = 'paddingBottom' in node && typeof (node as any).paddingBottom === 'number' ? (node as any).paddingBottom : 0;
+      const paddingLeftPx = 'paddingLeft' in node && typeof (node as any).paddingLeft === 'number' ? (node as any).paddingLeft : 0;
+
+      // 转换为rpx
+      const paddingTop = paddingTopPx !== 0 ? pxToRpx(paddingTopPx, conversionRate) : 0;
+      const paddingRight = paddingRightPx !== 0 ? pxToRpx(paddingRightPx, conversionRate) : 0;
+      const paddingBottom = paddingBottomPx !== 0 ? pxToRpx(paddingBottomPx, conversionRate) : 0;
+      const paddingLeft = paddingLeftPx !== 0 ? pxToRpx(paddingLeftPx, conversionRate) : 0;
 
       if (paddingTop === paddingRight && paddingTop === paddingBottom && paddingTop === paddingLeft) {
         // 四个方向相同，使用简写
-        styles.push(`padding: ${paddingTop}rpx`);
+        styles.push(`padding: ${spacingVar(paddingTopPx, paddingTop)}`);
       } else if (paddingTop === paddingBottom && paddingLeft === paddingRight) {
         // 上下相同，左右相同
-        styles.push(`padding: ${paddingTop}rpx ${paddingRight}rpx`);
+        styles.push(`padding: ${spacingVar(paddingTopPx, paddingTop)} ${spacingVar(paddingRightPx, paddingRight)}`);
       } else {
         // 四个方向都不同
-        styles.push(`padding: ${paddingTop}rpx ${paddingRight}rpx ${paddingBottom}rpx ${paddingLeft}rpx`);
+        styles.push(`padding: ${spacingVar(paddingTopPx, paddingTop)} ${spacingVar(paddingRightPx, paddingRight)} ${spacingVar(paddingBottomPx, paddingBottom)} ${spacingVar(paddingLeftPx, paddingLeft)}`);
       }
     }
   }
@@ -205,7 +393,9 @@ function generateWechatMiniProgramCode(node: SceneNode, conversionRate: number):
       if (visibleFill.type === 'SOLID' && visibleFill.color) {
         // 检查颜色是否可见（透明度 > 0.01）
         if (isColorVisible(visibleFill.color)) {
-          const color = colorToCss(visibleFill.color);
+          // 对于颜色样式，始终使用fillStyleId
+          const styleId = fillStyleId;
+          const color = generateColorWithStyleVariable(visibleFill.color, styleId);
           // 如果是文本节点，生成文本颜色；否则生成背景颜色
           if (isTextNode) {
             styles.push(`color: ${color}`);
@@ -227,12 +417,15 @@ function generateWechatMiniProgramCode(node: SceneNode, conversionRate: number):
           if (isTextNode && visibleFill.gradientStops && visibleFill.gradientStops.length > 0) {
             const firstStop = visibleFill.gradientStops[0];
             if (firstStop.color && isColorVisible(firstStop.color)) {
-              const color = colorToCss(firstStop.color);
+              const styleId = fillStyleId;
+              const color = generateColorWithStyleVariable(firstStop.color, styleId);
               styles.push(`color: ${color}`);
             }
           } else {
             // 非文本节点，生成渐变背景
-            styles.push(`background-image: ${gradientCss}`);
+            const styleId = fillStyleId;
+            const gradientWithVar = generateGradientWithStyleVariable(gradientCss, styleId);
+            styles.push(`background-image: ${gradientWithVar}`);
           }
         }
       }
@@ -257,7 +450,7 @@ function generateWechatMiniProgramCode(node: SceneNode, conversionRate: number):
       // 检查颜色是否可见（透明度 > 0）
       if (isColorVisible(stroke.color)) {
         hasVisibleStroke = true;
-        strokeColor = colorToCss(stroke.color);
+        strokeColor = generateColorWithStyleVariable(stroke.color, strokeStyleId);
       }
     }
   }
