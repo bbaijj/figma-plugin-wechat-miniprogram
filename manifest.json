@@ -7,7 +7,7 @@
     "codegen"
   ],
   "enableProposedApi": false,
-  "documentAccess": "static",
+  "documentAccess": "dynamic-page",
   "editorType": [
     "figma",
     "dev"
